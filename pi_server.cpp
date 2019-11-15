@@ -10,10 +10,12 @@
 #include <string>
 #include <map>
 
-#define PORT     8080
+#define PORT 12000
 #define MAXLINE 1024
 
 using namespace std;
+
+map<string,string> roomIp;
 
 
 
@@ -34,14 +36,12 @@ int main() {
     memset(&cliaddr, 0, sizeof(cliaddr));
 
     // Filling server information
-    servaddr.sin_family    = AF_INET; // IPv4
+    servaddr.sin_family = AF_INET; // IPv4
     servaddr.sin_addr.s_addr = INADDR_ANY;
     servaddr.sin_port = htons(PORT);
 
     // Bind the socket with the server address
-    if ( bind(sockfd, (const struct sockaddr *)&servaddr,
-            sizeof(servaddr)) < 0 )
-    {
+    if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
@@ -51,9 +51,7 @@ int main() {
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
     buffer[n] = '\0';
     printf("Client : %s\n", buffer);
-    sendto(sockfd, hello, strlen(hello),
-        MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
-            len);
+    sendto(sockfd, hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
     printf("Hello message sent.\n");
 
     return 0;
