@@ -5,14 +5,17 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <iostream>
 #define PORT 12000
 
-int main(int argc, char const *argv[])
-{
+using namespace std;
+
+int main(int argc, char const *argv[]){
     int sock = 0, valread;
+    socklen_t len;
     struct sockaddr_in serv_addr;
-    const char *hello = "Hello from client";
-    char buffer[1024] = {0};
+    const char *hello = argv[1];
+    char buffer[22];
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
         printf("\n Socket creation error \n");
@@ -23,7 +26,7 @@ int main(int argc, char const *argv[])
     serv_addr.sin_port = htons(PORT);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, "10.13.46.233", &serv_addr.sin_addr)<=0)
+    if(inet_pton(AF_INET, "10.13.43.58", &serv_addr.sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
@@ -36,7 +39,7 @@ int main(int argc, char const *argv[])
     }
     send(sock , hello , strlen(hello) , 0 );
     printf("Hello message sent\n");
-    valread = read( sock , buffer, 1024);
-    printf("%s\n",buffer );
+    valread = recvfrom( sock , &buffer, 22, MSG_WAITALL, (struct sockaddr *)&serv_addr,&len);
+    cout<<"buf: "<<buffer<<endl;
     return 0;
 }
