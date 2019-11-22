@@ -39,7 +39,6 @@ int main(){
 
 
     int returnStatus;
-    char* returnStr = (char*)malloc(100000);
     struct sockaddr_in floatingServer;
 
     int sockfd;
@@ -73,51 +72,46 @@ int main(){
     socklen_t len;
     while(true){
         cout<<"waiting"<<endl;
+        cout<<"Map size: "<<roomIp.size()<<endl;
         n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
-        cout<<"buf:"<<buffer<<": end"<<endl;
+        cout<<"buf: "<<buffer<<": end"<<endl;
 
         buffer[n] = '\0';
 
         if(n > 0){
             if(string(buffer).at(0) == '@'){
                 cout<<"Create room"<<endl;
-               //returnStatus = addRoom(string(buffer).substr(1),cliaddr);
-                returnStr = (char*) to_string(returnStatus).c_str();
+                returnStatus = addRoom(string(buffer).substr(1),cliaddr);
                 if(returnStatus == 0){
-                    sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                    sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
                 }
                 else if(returnStatus == -1){
-                    sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                    sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
                 }
                 cout<<"return status: "<<returnStatus<<endl;
                 cout<<"Map size: "<<roomIp.size()<<endl;
             }
             else if(string(buffer).at(0) == '?'){
-                //returnStatus = getRoom(string(buffer).substr(1),&floatingServer);
-                returnStr = (char*) to_string(returnStatus).c_str();
-                if( returnStatus == 0){
+                if((returnStatus = getRoom(string(buffer).substr(1),&floatingServer)) == 0){
                     sendto(sockfd, &floatingServer, sizeof(floatingServer), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
                 }
                 else if(returnStatus == -1){
-                    sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                    sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
                 }
             }
             else if(string(buffer).at(0) == '^'){
-                //returnStatus = removeRoom(string(buffer).substr(1));
-                returnStr = (char*) to_string(returnStatus).c_str();
-                if(returnStatus == 0){
-                    sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                if((returnStatus = removeRoom(string(buffer).substr(1))) == 0){
+                    sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
                 }
                 else if(returnStatus == -1){
-                    sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                    sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
                 }
             }
             else if(string(buffer).at(0) == '%'){
                 break;
             }else{
                 returnStatus = -1;
-                returnStr = (char*) to_string(returnStatus).c_str();
-                sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
             }
         }
 
