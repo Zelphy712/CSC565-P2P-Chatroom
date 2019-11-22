@@ -1,11 +1,31 @@
 #include <pthread.h>
+#include <iostream>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <string>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 
+#define PORT 12000
 #define MAXLINE 2048
 
-void createRoom(string room_name, string password){
+using namespace std;
+const char pi_server[] = "some ip address in dotted decimal form";
+struct sockaddr_in room_addr;
+
+int createRoom(char room_name[], char password[]){
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
-    const string *creation_message = "@" + room_name;
+    char creation_message[MAXLINE];
+    strcpy(creation_message, "@");
+    strcat(creation_message, room_name);
+    cout << creation_message << endl;
+    cout << password << endl;
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
@@ -17,7 +37,7 @@ void createRoom(string room_name, string password){
     serv_addr.sin_port = htons(PORT);
 
     // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, "10.13.46.233", &serv_addr.sin_addr)<=0)
+    if(inet_pton(AF_INET, pi_server, &serv_addr.sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
@@ -29,11 +49,10 @@ void createRoom(string room_name, string password){
         return -1;
     }
     send(sock , creation_message , strlen(creation_message) , 0 );
-    printf("Creation message sent\n");
+    cout << "Creation message sent" << endl;
     valread = read( sock , buffer, 1024);
         struct sockaddr_in servaddr, cliaddr;
 
-    // Creating room server
     int sockfd;
 
     // Creating socket file descriptor
@@ -60,8 +79,7 @@ void createRoom(string room_name, string password){
     socklen_t len;
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
         printf("test\n");
-
-
+    return 0;
 }
 
 void joinRoom(string room_name, string password) {
@@ -98,8 +116,14 @@ void broadcastMessage(string message){
     return;
 }
 
-int main(int argc, char* argv[]){
-    string pi_server = "some ip address in dotted decimal form";
+int main(){
+    char command[MAXLINE];
+    cout << "Please input a command: ";
+    cin >> command;
+    cout << endl;
+    char test[] = "test";
+    char room[] = "room";
+
 }
 
 
