@@ -12,6 +12,7 @@
 *  Any unrecognized first character will return a -1
 */
 
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -30,16 +31,28 @@ using namespace std;
 
 map<string,struct sockaddr_in> roomIp;
 
+int addRoom(string roomName, struct sockaddr_in addr);
+int removeRoom(string roomName);
+int getRoom(string roomName,struct sockaddr_in * outputStruct);
 
 // Driver code
-int main() {
+int main()
+{
+
+
+    int returnStatus;
+    struct sockaddr_in floatingServer;
+
     int sockfd;
-    char buffer[MAXLINE];
+    char *buffer;
     const char* hello = "Hello from server";
     struct sockaddr_in servaddr, cliaddr;
 
+    buffer = (char*) malloc(sizeof(char)*MAXLINE);
+
     // Creating socket file descriptor
-    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 )
+    {
         perror("socket creation failed");
         exit(EXIT_FAILURE);
     }
@@ -53,78 +66,102 @@ int main() {
     servaddr.sin_port = htons(PORT);
 
     // Bind the socket with the server address
-    if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
+    if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 )
+    {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
 
     int n;
     socklen_t len;
+    cout<<"waiting"<<endl;
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
-        printf("test\n");
+    cout<<"buf: "<<buffer<<": end"<<endl;
 
-    int returnStatus;
-    struct sockaddr_in floatingServer;
     buffer[n] = '\0';
-    if(buffer[0] == "@"){
-        if((returnStatus = addRoom(buffer.substr(1),cliaddr)) == 0){
-            sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        }else if(returnStatus == -1){
+
+    if(n > 0){
+            cout<<"test"<<endl;
+        if(string(buffer).at(0) == '@'){
+            if((returnStatus = addRoom(string(buffer).substr(1),cliaddr)) == 0){
+                sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            }
+            else if(returnStatus == -1){
+                sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            }
+        }
+        else if(string(buffer).at(0) == '?'){
+            if((returnStatus = getRoom(string(buffer).substr(1),&floatingServer)) == 0){
+                sendto(sockfd, &floatingServer, sizeof(floatingServer), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            }
+            else if(returnStatus == -1)
+            {
+                sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            }
+        }
+        else if(string(buffer).at(0) == '!')
+        {
+            if((returnStatus = removeRoom(string(buffer).substr(1))) == 0)
+            {
+                sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            }
+            else if(returnStatus == -1)
+            {
+                sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            }
+        }
+        else
+        {
+            returnStatus = -1;
             sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
         }
-    }else if(buffer[0] == "?"){
-         if((returnStatus = getRoom(buffer.substr(1),&floatingServer)) == 0){
-            sendto(sockfd, &floatingServer, sizeof(floatingServer), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        }else if(returnStatus == -1){
-            sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        }
-    }else if(buffer[0] == "!")){
-        if((returnStatus = removeRoom(buffer.substr(1),cliaddr)) == 0){
-            sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        }else if(returnStatus == -1){
-            sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-        }
-    }else{
-        returnStatus = -1;
-        sendto(sockfd, &returnStatus, 1, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
     }
 
-
-
-    printf("Client : %s\n", buffer);
+    cout<<"Client: "<<buffer<<endl;
     sendto(sockfd, hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
-    printf("Hello message sent.\n");
 
+    free(buffer);
     return 0;
 }
 
-int addRoom(string roomName, struct sockaddr_in addr){
-    if(roomIp.count(roomName) > 0){
+int addRoom(string roomName, struct sockaddr_in addr)
+{
+    if(roomIp.count(roomName) > 0)
+    {
         return -1;//the room already exists
-    }else{
+    }
+    else
+    {
         roomIp.insert(pair<string,struct sockaddr_in>(roomName,addr));
     }
     return 0;//insert successful
 }
 
-int removeRoom(string roomName){
-    if(roomIp.count(roomName)<1){
+int removeRoom(string roomName)
+{
+    if(roomIp.count(roomName)<1)
+    {
         return -1;//room did not exist
-    }else{
+    }
+    else
+    {
         roomIp.erase(roomName);
     }
     return 0;//removal successful
 }
 
-int getRoom(string roomName,struct sockaddr_in * outputStruct){
-    if(roomIp.count(roomName) > 0){
-        outputStruct = roomIp[roomName];
+int getRoom(string roomName,struct sockaddr_in * outputStruct)
+{
+    if(roomIp.count(roomName) > 0)
+    {
+        outputStruct = &roomIp[roomName];
         return 0;
-    }else{
+    }
+    else
+    {
         return -1;//room does not exist
     }
 }
-
 
 
 
