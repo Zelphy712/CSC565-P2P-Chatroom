@@ -94,6 +94,7 @@ int main(){
             }
             cout<<"return status: "<<returnStatus<<endl;
             cout<<"Map size: "<<roomIp.size()<<endl;
+            cout<<"IP address: "<<roomIp[string(buffer).substr(1)].sin_addr.s_addr<<endl;
         }
         else if(string(buffer).at(0) == '?'){
             returnStatus = getRoom(string(buffer).substr(1),&floatingServer);
