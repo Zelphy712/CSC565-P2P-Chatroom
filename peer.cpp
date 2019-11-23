@@ -15,7 +15,7 @@
 #define MAXLINE 2048
 
 using namespace std;
-const char pi_server[] = "some ip address in dotted decimal form";
+const char pi_server[] = "192.168.1.7";
 struct sockaddr_in room_addr;
 
 int createRoom(char room_name[], char password[]){
@@ -118,11 +118,15 @@ void broadcastMessage(string message){
 
 int main(){
     char command[MAXLINE];
+    char room[] = "room";
     cout << "Please input a command: ";
     cin >> command;
     cout << endl;
-    char test[] = "test";
-    char room[] = "room";
+    createRoom(command, room);
+    strcpy(command, "");
+
+
+    return 0;
 
 }
 

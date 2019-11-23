@@ -125,6 +125,7 @@ int main(){
 
 
         cout<<"Client: "<<buffer<<endl;
+        bzero(buffer, sizeof(buffer));
         sendto(sockfd, hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
     }
     free(buffer);
