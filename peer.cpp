@@ -14,23 +14,29 @@
 #define PORT 12000
 #define MAXLINE 2048
 
+struct room_creation_args {
+    char room_name[MAXLINE];
+    char password[MAXLINE];
+};
+
 using namespace std;
-const char pi_server[] = "192.168.1.7";
+const char pi_server[] = "192.168.1.4";
 struct sockaddr_in room_addr;
 
-int createRoom(char room_name[], char password[]){
+void *createRoom(void* arguments){
+    struct room_creation_args *room = (struct room_creation_args *)arguments;
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char creation_message[MAXLINE];
     strcpy(creation_message, "@");
-    strcat(creation_message, room_name);
+    strcat(creation_message, room -> room_name);
     cout << creation_message << endl;
-    cout << password << endl;
+    cout << room -> password << endl;
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
         printf("\n Socket creation error \n");
-        return -1;
+        return NULL;
     }
 
     serv_addr.sin_family = AF_INET;
@@ -40,13 +46,13 @@ int createRoom(char room_name[], char password[]){
     if(inet_pton(AF_INET, pi_server, &serv_addr.sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
-        return -1;
+        return NULL;
     }
 
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         printf("\nConnection Failed \n");
-        return -1;
+        return NULL;
     }
     send(sock , creation_message , strlen(creation_message) , 0 );
     cout << "Creation message sent" << endl;
@@ -79,7 +85,8 @@ int createRoom(char room_name[], char password[]){
     socklen_t len;
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
         printf("test\n");
-    return 0;
+    pthread_exit(NULL);
+    return NULL;
 }
 
 void joinRoom(string room_name, string password) {
@@ -117,14 +124,17 @@ void broadcastMessage(string message){
 }
 
 int main(){
-    char command[MAXLINE];
-    char room[] = "room";
-    cout << "Please input a command: ";
-    cin >> command;
-    cout << endl;
-    createRoom(command, room);
-    strcpy(command, "");
-
+    pthread_t server_thread;
+    struct room_creation_args args;
+    while(true){
+        cout << "Please input a room name: ";
+        cin >> args.room_name;
+        cout << "Please input a password: ";
+        cin >> args.password;
+        cout << endl;
+        pthread_create(&server_thread, NULL, &createRoom, (void*) &args);
+    }
+    pthread_join(server_thread, NULL);
 
     return 0;
 
