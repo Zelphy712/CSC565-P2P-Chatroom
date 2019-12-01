@@ -33,7 +33,7 @@ map<string,struct sockaddr_in> roomIp;
 
 int addRoom(string roomName, struct sockaddr_in addr);
 int removeRoom(string roomName);
-int getRoom(string roomName,struct sockaddr_in * outputStruct);
+string getRoom(string roomName);
 
 int main(){
 
@@ -101,13 +101,14 @@ int main(){
             cout<<"IP address: "<<roomIp[string(buffer).substr(1)].sin_addr.s_addr<<endl;
         }
         else if(string(buffer).at(0) == '?'){
-            returnStatus = getRoom(string(buffer).substr(1),&floatingServer);
-            returnStr = (char*) to_string(returnStatus).c_str();
-            if( returnStatus == 0){
-                cout << returnStatus << endl;
-                sendto(sockfd, &floatingServer, sizeof(floatingServer), 0, (const struct sockaddr *) &cliaddr, cli_len);
+            returnStr = (char*) getRoom(string(buffer)).c_str();
+                            cout << "return status: " << returnStr << endl;
+
+            if( returnStr != "-1"){
+                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
-            else if(returnStatus == -1){
+            else{
+
                 sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
         }
@@ -160,14 +161,16 @@ int removeRoom(string roomName)
     return 0;//removal successful
 }
 
-int getRoom(string roomName,struct sockaddr_in * outputStruct)
+string getRoom(string roomName)
 {
+    string output;
+    cout<<roomIp.count(roomName);
     if(roomIp.count(roomName) > 0){
-        outputStruct = &roomIp[roomName];
-        return 0;
+        output = to_string(roomIp[roomName].sin_addr.s_addr) + ":" + to_string(roomIp[roomName].sin_port);
+        return output;
     }
     else{
-        return -1;//room does not exist
+        return "-1";//room does not exist
     }
 }
 
