@@ -1,4 +1,5 @@
 #include <pthread.h>
+#include <cstring>
 #include <iostream>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -14,32 +15,50 @@
 #define PORT 12000
 #define MAXLINE 2048
 
-struct room_args {
-    char room_name[MAXLINE];
-    char password[MAXLINE];
-};
+
 
 using namespace std;
+struct room_args {
+    string room_name;
+    string password;
+};
+int is_server = 0;
 const char pi_server[] = "10.13.49.208";
 char message_to_pi_server[MAXLINE];
-struct sockaddr_in room_addr;
+struct sockaddr_in room_addr[100];
 
-void *startRoomServer(void* arguments){
-    struct room_args *room = (struct room_args *)arguments;
+void *sendMessage(void*){
+    while(true){
+        string message;
+        cout << "Please input your message: ";
+        cin >> message;
 
+    }
+}
+/*
+/****************************************************************
+/ Contact Pi server function
+/
+/ Input: message (string)
+/
+/ Create a socket for communication with the raspberry pi server
+/ Send a message to the server
+/
+******************************************************************
+*/
+
+void contactPiServer(string message) {
     int sock = 0, valread;
 
     socklen_t len_client;
     struct sockaddr_in serv_addr;
-    strcpy(message_to_pi_server, "@");
-    strcat(message_to_pi_server, room -> room_name);
-    cout << message_to_pi_server << endl;
-    cout << room -> password << endl;
+    char server_message[message.size() +1];
+    strcpy(server_message, message.c_str());
+    cout << server_message << endl;
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
         printf("\n Socket creation error \n");
-        return NULL;
     }
 
     serv_addr.sin_family = AF_INET;
@@ -49,25 +68,26 @@ void *startRoomServer(void* arguments){
     if(inet_pton(AF_INET, pi_server, &serv_addr.sin_addr)<=0)
     {
         printf("\nInvalid address/ Address not supported \n");
-        return NULL;
     }
 
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         printf("\nConnection Failed \n");
-        return NULL;
     }
     socklen_t len_server = sizeof(serv_addr);
-    send(sock , message_to_pi_server , strlen(message_to_pi_server) , 0 );
+    send(sock , server_message , strlen(server_message) , 0 );
     cout << "Creation message sent" << endl;
-    bzero(message_to_pi_server, sizeof(message_to_pi_server));
+    bzero(server_message, sizeof(server_message));
     recvfrom(sock, (char *)buffer, sizeof(buffer), MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server);
-    struct sockaddr_in servaddr, cliaddr;
-    cout << buffer << endl;
 
     close(sock);
-    int sockfd;
+}
+void *startRoomServer(void* arguments){
+    struct room_args *room = (struct room_args *)arguments;
+    struct sockaddr_in servaddr, cliaddr;
 
+    int sockfd;
+    char buffer[1024] = {0};
     // Creating socket file descriptor
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("socket creation failed");
@@ -77,6 +97,7 @@ void *startRoomServer(void* arguments){
     memset(&servaddr, 0, sizeof(servaddr));
     memset(&cliaddr, 0, sizeof(cliaddr));
 
+    socklen_t cli_len = sizeof(cliaddr);
     // Filling server information
     servaddr.sin_family = AF_INET; // IPv4
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -90,14 +111,16 @@ void *startRoomServer(void* arguments){
     }
 
     int n;
-    cout << "Room server started" << endl;
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len_server);
+    cout << "Room: " << room->room_name << endl;
+    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &cli_len);
         printf("test\n");
+    is_server = 1;
     pthread_exit(NULL);
 
 }
 void createRoom(){
     pthread_t server_thread;
+    pthread_t message_thread;
     struct room_args args;
     cout << "Input a room name: ";
     cin >> args.room_name;
@@ -105,8 +128,12 @@ void createRoom(){
     cin >> args.password;
     cout << endl;
 
+    contactPiServer("@"+args.room_name);
+
     pthread_create(&server_thread, NULL, &startRoomServer, (void*) &args);
+    pthread_create(&message_thread, NULL, &sendMessage, NULL);
     pthread_join(server_thread, NULL);
+    pthread_join(message_thread, NULL);
 }
 
 void joinRoom(string room_name, string password) {
@@ -135,19 +162,6 @@ void exitRoom() {
     return;
 }
 
-void sendMessage(string message) {
-    /*
-    -Send message to room server, which will be sent to other peers
-    */
-    return;
-}
-
-void broadcastMessage(string message){
-    /*
-    -Broadcast message to all peers
-    */
-    return;
-}
 
 int main(){
     int choice;
