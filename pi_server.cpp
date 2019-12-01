@@ -159,7 +159,7 @@ string getRoom(string roomName)
     string output;
     if(roomIp.count(roomName) > 0){
        // outputStruct = &roomIp[roomName];
-        output = to_string(roomIp[roomName]->sin_addr->s_addr) + ":" + to_string(roomIp[roomName]->sin_port);
+        output = to_string(roomIp[roomName].sin_addr.s_addr) + ":" + to_string(roomIp[roomName].sin_port);
         return 0;
     }
     else{
