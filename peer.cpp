@@ -19,6 +19,11 @@ struct room_creation_args {
     char password[MAXLINE];
 };
 
+struct message {
+    string message;
+
+};
+
 using namespace std;
 const char pi_server[] = "192.168.1.4";
 struct sockaddr_in room_addr;
@@ -128,6 +133,10 @@ void joinRoom(string room_name, string password) {
     //***********************************************
     // Request access to floating chat server
     //***********************************************
+
+    string ip = toString(buffer).substr(0,(toString(buffer).length()-toString(buffer).find(":")));
+    int port = stoi(toString(buffer).substr((toString(buffer).length()-toString(buffer).find(":"))+1));
+
 
 
 

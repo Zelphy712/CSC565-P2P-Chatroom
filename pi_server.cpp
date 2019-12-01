@@ -87,9 +87,11 @@ int main(){
             returnStatus = addRoom(string(buffer).substr(1),cliaddr);
             returnStr = (char*) to_string(returnStatus).c_str();
             if(returnStatus == 0){
+                cout<<"success"<<endl;
                 sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
             }
             else if(returnStatus == -1){
+                cout<<"Failed"<<endl;
                 sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
             }
             cout<<"return status: "<<returnStatus<<endl;
@@ -104,6 +106,7 @@ int main(){
             else{
                 sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
             }
+            cout<<"returnStr: "<<returnStr<<endl;
         }
         else if(string(buffer).at(0) == '^'){
             returnStatus = removeRoom(string(buffer).substr(1));
@@ -158,9 +161,10 @@ string getRoom(string roomName)
 {
     string output;
     if(roomIp.count(roomName) > 0){
-       // outputStruct = &roomIp[roomName];
+        // outputStruct = &roomIp[roomName];
+        cout<<"REERERER "<<roomIp[roomName].sin_addr.s_addr<<endl;
         output = to_string(roomIp[roomName].sin_addr.s_addr) + ":" + to_string(roomIp[roomName].sin_port);
-        return 0;
+        return output;
     }
     else{
         return "-1";//room does not exist
