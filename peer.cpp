@@ -90,11 +90,57 @@ void *createRoom(void* arguments){
 }
 
 void joinRoom(string room_name, string password) {
+    //***********************************************
+    //Connect to pi_server
+    //***********************************************
+    int sock = 0, valread;
+    socklen_t len;
+    struct sockaddr_in serv_addr;
+    const char *hello = (char*) ("?" + room_name).c_str();
+    char buffer[22];
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+    {
+        printf("\n Socket creation error \n");
+        return -1;
+    }
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    // Change hardcoded IP to the static server
+    if(inet_pton(AF_INET, "10.13.43.44", &serv_addr.sin_addr)<=0)
+    {
+        printf("\nInvalid address/ Address not supported \n");
+        return -1;
+    }
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+        printf("\nConnection Failed \n");
+        return -1;
+    }
+
+    send(sock , hello , strlen(hello) , 0 );
+    valread = recvfrom( sock , &buffer, 22, MSG_WAITALL, (struct sockaddr *)&serv_addr,&len);
+    cout<<"buf: "<<buffer<<endl;
+
+    //***********************************************
+    // Request access to floating chat server
+    //***********************************************
+
+
+
+
     /*
     -Ping the raspberryPi server to find the ip address of the room it is looking for
     -Once the ip address is known, send a message that contains the peer's ip address, the port number and the room password
     -Confirmation message upon successful join
     */
+
+
+
+
     return;
 }
 
