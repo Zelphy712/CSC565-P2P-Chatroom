@@ -70,10 +70,11 @@ int main(){
     }
 
     int n;
-    socklen_t len;
+    socklen_t serv_len = sizeof(servaddr);
+    socklen_t cli_len = sizeof(cliaddr);
     while(true){
         cout<<"waiting"<<endl;
-        if(recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len) < 0){
+        if(recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &cli_len) < 0){
                 cout<<"Receive failed"<<endl;
                 break;
         }
@@ -87,10 +88,13 @@ int main(){
             returnStatus = addRoom(string(buffer).substr(1),cliaddr);
             returnStr = (char*) to_string(returnStatus).c_str();
             if(returnStatus == 0){
-                sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                if(sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len) < 0){
+                  perror("send failed");
+                  exit(EXIT_FAILURE);
+                };
             }
             else if(returnStatus == -1){
-                sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
             cout<<"return status: "<<returnStatus<<endl;
             cout<<"Map size: "<<roomIp.size()<<endl;
@@ -100,20 +104,21 @@ int main(){
             returnStatus = getRoom(string(buffer).substr(1),&floatingServer);
             returnStr = (char*) to_string(returnStatus).c_str();
             if( returnStatus == 0){
-                sendto(sockfd, &floatingServer, sizeof(floatingServer), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                cout << returnStatus << endl;
+                sendto(sockfd, &floatingServer, sizeof(floatingServer), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
             else if(returnStatus == -1){
-                sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
         }
         else if(string(buffer).at(0) == '^'){
             returnStatus = removeRoom(string(buffer).substr(1));
             returnStr = (char*) to_string(returnStatus).c_str();
             if(returnStatus == 0){
-                sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
             else if(returnStatus == -1){
-                sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
         }
         else if(string(buffer).at(0) == '%'){
@@ -121,13 +126,13 @@ int main(){
         }else{
             returnStatus = -1;
             returnStr = (char*) to_string(returnStatus).c_str();
-            sendto(sockfd, &returnStr, sizeof(returnStr), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+            sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
         }
 
 
         cout<<"Client: "<<buffer<<endl;
         bzero(buffer, sizeof(buffer));
-        sendto(sockfd, hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+        sendto(sockfd, hello, strlen(hello), 0, (const struct sockaddr *) &cliaddr, cli_len);
     }
     free(buffer);
     return 0;

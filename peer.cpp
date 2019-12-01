@@ -14,23 +14,26 @@
 #define PORT 12000
 #define MAXLINE 2048
 
-struct room_creation_args {
+struct room_args {
     char room_name[MAXLINE];
     char password[MAXLINE];
 };
 
 using namespace std;
-const char pi_server[] = "192.168.1.4";
+const char pi_server[] = "10.13.49.208";
+char message_to_pi_server[MAXLINE];
 struct sockaddr_in room_addr;
 
-void *createRoom(void* arguments){
-    struct room_creation_args *room = (struct room_creation_args *)arguments;
+void *startRoomServer(void* arguments){
+    struct room_args *room = (struct room_args *)arguments;
+
     int sock = 0, valread;
+
+    socklen_t len_client;
     struct sockaddr_in serv_addr;
-    char creation_message[MAXLINE];
-    strcpy(creation_message, "@");
-    strcat(creation_message, room -> room_name);
-    cout << creation_message << endl;
+    strcpy(message_to_pi_server, "@");
+    strcat(message_to_pi_server, room -> room_name);
+    cout << message_to_pi_server << endl;
     cout << room -> password << endl;
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
@@ -54,11 +57,15 @@ void *createRoom(void* arguments){
         printf("\nConnection Failed \n");
         return NULL;
     }
-    send(sock , creation_message , strlen(creation_message) , 0 );
+    socklen_t len_server = sizeof(serv_addr);
+    send(sock , message_to_pi_server , strlen(message_to_pi_server) , 0 );
     cout << "Creation message sent" << endl;
-    valread = read( sock , buffer, 1024);
-        struct sockaddr_in servaddr, cliaddr;
+    bzero(message_to_pi_server, sizeof(message_to_pi_server));
+    recvfrom(sock, (char *)buffer, sizeof(buffer), MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server);
+    struct sockaddr_in servaddr, cliaddr;
+    cout << buffer << endl;
 
+    close(sock);
     int sockfd;
 
     // Creating socket file descriptor
@@ -73,7 +80,8 @@ void *createRoom(void* arguments){
     // Filling server information
     servaddr.sin_family = AF_INET; // IPv4
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(PORT);
+    servaddr.sin_port = htons(12001);
+
 
     // Bind the socket with the server address
     if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) {
@@ -82,11 +90,23 @@ void *createRoom(void* arguments){
     }
 
     int n;
-    socklen_t len;
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len);
+    cout << "Room server started" << endl;
+    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len_server);
         printf("test\n");
     pthread_exit(NULL);
-    return NULL;
+
+}
+void createRoom(){
+    pthread_t server_thread;
+    struct room_args args;
+    cout << "Input a room name: ";
+    cin >> args.room_name;
+    cout << "Input a password: ";
+    cin >> args.password;
+    cout << endl;
+
+    pthread_create(&server_thread, NULL, &startRoomServer, (void*) &args);
+    pthread_join(server_thread, NULL);
 }
 
 void joinRoom(string room_name, string password) {
@@ -95,6 +115,12 @@ void joinRoom(string room_name, string password) {
     -Once the ip address is known, send a message that contains the peer's ip address, the port number and the room password
     -Confirmation message upon successful join
     */
+
+    char name[MAXLINE];
+    cout << "What room do you want to join? ";
+    cin >> name;
+    cout << endl;
+
     return;
 }
 
@@ -124,17 +150,19 @@ void broadcastMessage(string message){
 }
 
 int main(){
-    pthread_t server_thread;
-    struct room_creation_args args;
+    int choice;
+
     while(true){
-        cout << "Please input a room name: ";
-        cin >> args.room_name;
-        cout << "Please input a password: ";
-        cin >> args.password;
+        cout << "Choose an option:" << endl << "1. Create a room" << endl << "2. Join a room" << endl;
+        cin >> choice;
         cout << endl;
-        pthread_create(&server_thread, NULL, &createRoom, (void*) &args);
+        if(choice == 1){
+            createRoom();
+        }
+
+
     }
-    pthread_join(server_thread, NULL);
+
 
     return 0;
 
