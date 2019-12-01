@@ -1,4 +1,5 @@
 #include <pthread.h>
+#include <mutex>
 #include <cstring>
 #include <iostream>
 #include <sys/types.h>
@@ -18,20 +19,22 @@
 
 
 using namespace std;
+mutex output_lock;
 struct room_args {
     string room_name;
     string password;
 };
 int is_server = 0;
 const char pi_server[] = "10.13.49.208";
-char message_to_pi_server[MAXLINE];
 struct sockaddr_in room_addr[100];
 
 void *sendMessage(void*){
     while(true){
         string message;
+        output_lock.lock();
         cout << "Please input your message: ";
         cin >> message;
+        output_lock.unlock();
 
     }
 }
@@ -54,7 +57,6 @@ void contactPiServer(string message) {
     struct sockaddr_in serv_addr;
     char server_message[message.size() +1];
     strcpy(server_message, message.c_str());
-    cout << server_message << endl;
     char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
@@ -76,9 +78,10 @@ void contactPiServer(string message) {
     }
     socklen_t len_server = sizeof(serv_addr);
     send(sock , server_message , strlen(server_message) , 0 );
-    cout << "Creation message sent" << endl;
+    cout << "Message sent" << endl;
     bzero(server_message, sizeof(server_message));
     recvfrom(sock, (char *)buffer, sizeof(buffer), MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server);
+    cout << buffer << endl;
 
     close(sock);
 }
@@ -111,9 +114,10 @@ void *startRoomServer(void* arguments){
     }
 
     int n;
+    output_lock.lock();
     cout << "Room: " << room->room_name << endl;
+    output_lock.unlock();
     n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &cli_len);
-        printf("test\n");
     is_server = 1;
     pthread_exit(NULL);
 
@@ -136,17 +140,19 @@ void createRoom(){
     pthread_join(message_thread, NULL);
 }
 
-void joinRoom(string room_name, string password) {
+void joinRoom() {
     /*
     -Ping the raspberryPi server to find the ip address of the room it is looking for
     -Once the ip address is known, send a message that contains the peer's ip address, the port number and the room password
     -Confirmation message upon successful join
     */
 
-    char name[MAXLINE];
+    string name;
     cout << "What room do you want to join? ";
     cin >> name;
     cout << endl;
+
+    contactPiServer("?"+name);
 
     return;
 }
@@ -172,6 +178,9 @@ int main(){
         cout << endl;
         if(choice == 1){
             createRoom();
+        }
+        else if(choice == 2){
+            joinRoom();
         }
 
 
