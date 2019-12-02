@@ -84,7 +84,6 @@ int main(){
 
 
         if(string(buffer).at(0) == '@'){
-            cout<<"Create room"<<endl;
             returnStatus = addRoom(string(buffer).substr(1),cliaddr);
             returnStr = (char*) to_string(returnStatus).c_str();
             if(returnStatus == 0){
@@ -96,14 +95,15 @@ int main(){
             else if(returnStatus == -1){
                 sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
-            cout<<"return status: "<<returnStatus<<endl;
-            cout<<"Map size: "<<roomIp.size()<<endl;
-            cout<<"IP address: "<<roomIp[string(buffer).substr(1)].sin_addr.s_addr<<endl;
+            //cout<<"return status: "<<returnStatus<<endl;
+            //cout<<"Map size: "<<roomIp.size()<<endl;
+            //cout<<"IP address: "<<roomIp[string(buffer).substr(1)].sin_addr.s_addr<<endl;
         }
         else if(string(buffer).at(0) == '?'){
-            returnStr = (char*) getRoom(string(buffer)).c_str();
-                            cout << "return status: " << returnStr << endl;
-
+            string returned = getRoom(string(buffer).substr(1));
+            cout<<"Returned: "<<returned<<endl;
+            returnStr = (char*) returned.c_str();
+            cout << "return status: " << returnStr << endl;
             if( returnStr != "-1"){
                 sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
@@ -131,7 +131,7 @@ int main(){
         }
 
 
-        cout<<"Client: "<<buffer<<endl;
+        //cout<<"Client: "<<buffer<<endl;
         bzero(buffer, sizeof(buffer));
         sendto(sockfd, hello, strlen(hello), 0, (const struct sockaddr *) &cliaddr, cli_len);
     }
@@ -164,9 +164,10 @@ int removeRoom(string roomName)
 string getRoom(string roomName)
 {
     string output;
-    cout<<roomIp.count(roomName);
+    cout<<roomName<<endl;
     if(roomIp.count(roomName) > 0){
         output = to_string(roomIp[roomName].sin_addr.s_addr) + ":" + to_string(roomIp[roomName].sin_port);
+        cout<<"Output: "<<output<<endl;
         return output;
     }
     else{

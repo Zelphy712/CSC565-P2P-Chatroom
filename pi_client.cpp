@@ -40,6 +40,6 @@ int main(int argc, char const *argv[]){
     send(sock , hello , strlen(hello) , 0 );
     printf("Hello message sent\n");
     valread = recvfrom( sock , &buffer, 22, MSG_WAITALL, (struct sockaddr *)&serv_addr,&len);
-    cout<<"buf: "<<buffer<<endl;
+    cout<<"buf: "<<string(buffer)<<endl;
     return 0;
 }
