@@ -19,6 +19,7 @@
 
 
 
+
 using namespace std;
 mutex output_lock;
 struct room_args {
@@ -30,6 +31,14 @@ int is_server = 0;
 const char pi_server[] = "10.13.49.205";
 string username;
 map <string, struct sockaddr_in> room_addr;
+
+void *sendMessage(void*);
+void contactPiServer(string message);
+void *startRoomServer(void* arguments);
+void createRoom();
+void joinRoom();
+void exitRoom();
+
 
 void *sendMessage(void*){
     int sock = 0;
@@ -79,6 +88,7 @@ void *sendMessage(void*){
 */
 
 void contactPiServer(string message) {
+
     int sock = 0, valread;
 
     socklen_t len_client;
@@ -117,6 +127,7 @@ void contactPiServer(string message) {
     close(sock);
 }
 void *startRoomServer(void* arguments){
+
     struct room_args *room = (struct room_args *)arguments;
     struct sockaddr_in servaddr, cliaddr;
 
@@ -248,6 +259,11 @@ void joinRoom() {
 }
 
 void exitRoom() {
+    if(is_server){
+        //
+    }else{
+        //send message to server that says "exit:<username>"
+    }
     /*
     -If peer is the current room server, send an exit message to the raspberryPi server
         +Send the list of peers to another peer, making them the new chat room server; if there are no other peers, toss the room
