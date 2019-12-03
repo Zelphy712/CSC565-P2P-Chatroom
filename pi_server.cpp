@@ -105,21 +105,22 @@ int main(){
             returnStr = (char*) returned.c_str();
             cout << "return status: " << returnStr << endl;
             if( returnStr != "-1"){
-                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
+
+                sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
             else{
 
-                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
+                sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
         }
         else if(string(buffer).at(0) == '^'){
             returnStatus = removeRoom(string(buffer).substr(1));
             returnStr = (char*) to_string(returnStatus).c_str();
             if(returnStatus == 0){
-                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
+                sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
             else if(returnStatus == -1){
-                sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
+                sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
         }
         else if(string(buffer).at(0) == '%'){
@@ -127,7 +128,7 @@ int main(){
         }else{
             returnStatus = -1;
             returnStr = (char*) to_string(returnStatus).c_str();
-            sendto(sockfd, &returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
+            sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
         }
 
 
