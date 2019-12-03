@@ -41,6 +41,10 @@ void *sendMessage(void*){
         output_lock.lock();
         cout << "Please input your message: ";
         cin >> message;
+        if(message.find("/exit")!=-1){
+            exitRoom();
+            break;
+        }
         output_lock.unlock();
         if(is_server){
             char server_message[message.size() +1];
