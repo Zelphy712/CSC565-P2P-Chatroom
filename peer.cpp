@@ -103,8 +103,13 @@ void contactPiServer(string message) {
     socklen_t len_server = sizeof(serv_addr);
     send(sock , server_message , strlen(server_message) , 0 );
     bzero(server_message, sizeof(server_message));
-    recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server);
-    cout << buffer << endl;
+    while(recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server)){
+        cout<<"Return length: "<<string(buffer).length() << endl;
+        cout<<"Return string: "<<buffer<<endl;
+    }
+    cout<<"---------------------------------"<<endl;
+    cout<<"Return length: "<<string(buffer).length() << endl;
+    cout<<"Return string: "<<buffer<<endl;
     close(sock);
 }
 void *startRoomServer(void* arguments){
