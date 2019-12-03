@@ -105,8 +105,7 @@ int main(){
             returnStr = (char*) returned.c_str();
             cout << "return status: " << returnStr << endl;
             if( returnStr != "-1"){
-
-                sendto(sockfd, returnStr, sizeof(returnStr), 0, (const struct sockaddr *) &cliaddr, cli_len);
+                sendto(sockfd, returnStr, string(returnStr).length()+1, 0, (const struct sockaddr *) &cliaddr, cli_len);
             }
             else{
 

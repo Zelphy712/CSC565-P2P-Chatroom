@@ -281,7 +281,7 @@ void exitRoom() {
     }else{
         //send message to server that says "exit|<username>"
       	sendMessage("exit|" + username,host_addr);
-      	exit(0);
+      	running = false;
     }
     /*
     -If peer is the current room server, send an exit message to the raspberryPi server
