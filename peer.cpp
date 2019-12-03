@@ -27,7 +27,7 @@ struct room_args {
 };
 int i = 0;
 int is_server = 0;
-const char pi_server[] = "10.13.49.208";
+const char pi_server[] = "10.13.49.205";
 string username;
 map <string, struct sockaddr_in> room_addr;
 
@@ -104,7 +104,7 @@ void contactPiServer(string message) {
     send(sock , server_message , strlen(server_message) , 0 );
     bzero(server_message, sizeof(server_message));
     recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server);
-
+    cout << buffer << endl;
     close(sock);
 }
 void *startRoomServer(void* arguments){
@@ -196,6 +196,7 @@ void joinRoom() {
     cout << "What room do you want to join? ";
     cin >> name;
     cout << endl;
+    contactPiServer("?"+name);
     int sock = 0, valread;
 
     socklen_t len_client;
@@ -231,7 +232,7 @@ void joinRoom() {
     bzero(server_message, sizeof(server_message));
     recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server);
     cout << buffer << endl;
-    //contactPiServer("?"+name);
+
 
     return;
 }
