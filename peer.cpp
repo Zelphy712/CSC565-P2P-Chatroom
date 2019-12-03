@@ -138,29 +138,30 @@ void *startRoomServer(void* arguments){
     }
     is_server = 1;
     int n;
+    while(true){
+        recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len_client);
 
-    recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len_client);
-
-    if(string(buffer).at(0) == '@'){
-        char already_in_use[4];
-        if(room_addr.count(string(buffer).substr(1)) > 0){
-            strcpy(already_in_use, "1");
-            if(sendto(sockfd, already_in_use, sizeof(already_in_use), 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
-                perror("Send failed");
-                exit(EXIT_FAILURE);
+        if(string(buffer).at(0) == '@'){
+            char already_in_use[4];
+            if(room_addr.count(string(buffer).substr(1)) > 0){
+                strcpy(already_in_use, "1");
+                if(sendto(sockfd, already_in_use, sizeof(already_in_use), 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
+                    perror("Send failed");
+                    exit(EXIT_FAILURE);
+                }
             }
-        }
-        else{
-            room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1),cliaddr));
-            const char* message = to_string(room_addr[string(buffer).substr(1)].sin_port).c_str();
-            if(sendto(sockfd, message, sizeof(message), 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
-                perror("Send failed");
-                exit(EXIT_FAILURE);
+            else{
+                room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1),cliaddr));
+                const char* message = to_string(room_addr[string(buffer).substr(1)].sin_port).c_str();
+                if(sendto(sockfd, message, sizeof(message), 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
+                    perror("Send failed");
+                    exit(EXIT_FAILURE);
+                }
             }
+            strcpy(already_in_use, "");
         }
-        strcpy(already_in_use, "");
-
     }
+
 
 
     pthread_exit(NULL);
