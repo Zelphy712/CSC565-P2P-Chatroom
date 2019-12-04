@@ -75,7 +75,7 @@ void *acceptInput(void*){
     while(true){
         string message;
         output_lock.lock();
-        cin >> message;
+        getline(cin, message);
         output_lock.unlock();
 
         if(message.find("/exit")!=-1){
@@ -84,7 +84,7 @@ void *acceptInput(void*){
         }
 
         if(is_server){
-            message = username + message;
+            message = username + ": " + message;
             for(map<string, struct sockaddr_in>::iterator it = room_addr.begin(); it!=room_addr.end(); ++it){
                 sendMessage(message, it->second);
             }
@@ -203,6 +203,7 @@ void *startRoomServer(void* arguments){
             }
             cout << string(buffer).substr(1) << endl;
         }
+
       	}
     }
 
@@ -215,11 +216,11 @@ void createRoom(){
     pthread_t server_thread;
     pthread_t message_thread;
     cout << "Make a username: ";
-    cin >> username;
+    getline(cin, username);
     cout << "Input a room name: ";
-    cin >> args.room_name;
+    getline(cin, args.room_name);
     cout << "Input a password: ";
-    cin >> args.password;
+    getline(cin, args.password);
     cout << endl;
 
     contactPiServer("@"+args.room_name);
@@ -228,7 +229,6 @@ void createRoom(){
     pthread_create(&message_thread, NULL, &acceptInput, NULL);
     pthread_join(server_thread, NULL);
     pthread_join(message_thread, NULL);
-  	cout<<"STUFF"<<endl;
 }
 
 void joinRoom() {
@@ -246,7 +246,7 @@ void joinRoom() {
     string name;
     string password;
     cout << "What room do you want to join? ";
-    cin >> name;
+    getline(cin, name);
     cout << endl;
   	string ipString;
     ipString = contactPiServer("?"+name);
@@ -264,7 +264,7 @@ void joinRoom() {
         printf("\n Socket creation error \n");
     }
     cout << "Enter a username: ";output_lock.unlock();
-    cin >> username;
+    getline(cin, username);
 
     string message = "@" + username;
     char server_message[message.size() +1];
@@ -308,18 +308,21 @@ void exitRoom() {
 
 
 int main(){
-    int choice;
+    string choice;
     host_addr.sin_family = AF_INET;
 
     while(running){
         cout << "Choose an option:" << endl << "1. Create a room" << endl << "2. Join a room" << endl;
-        cin >> choice;
+        getline(cin, choice);
         cout << endl;
-        if(choice == 1){
+        if(choice == "1"){
             createRoom();
         }
-        else if(choice == 2){
+        else if(choice == "2"){
             joinRoom();
+        }
+        else{
+            //do nothing
         }
 
 
