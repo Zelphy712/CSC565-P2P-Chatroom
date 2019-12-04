@@ -27,10 +27,12 @@ struct room_args {
     string password;
 };
 struct sockaddr_in host_addr;
+struct sockaddr_in peer_addr;
 int sock;
+int sockfd;
 int i = 0;
 int is_server = 0;
-const char pi_server[] = "10.13.49.208";
+const char pi_server[] = "192.168.1.4";
 string username;
 map <string, struct sockaddr_in> room_addr;
 struct room_args args;
@@ -48,33 +50,28 @@ void sendMessage(string message, struct sockaddr_in receiver);
 void sendMessage(string message, struct sockaddr_in receiver){
   	cout<<"Message: "<<message<<endl;
   	socklen_t sock_len = sizeof(receiver);
-  	sock = 0;
-  	sock = socket(AF_INET, SOCK_DGRAM, 0);
     char server_message[message.size() +1];
     strcpy(server_message, message.c_str());
-    sendto(sock, server_message, sizeof(server_message), 0, (const struct sockaddr*)&receiver, sock_len);
+    sendto(sockfd, server_message, string(server_message).length() + 1, 0, (const struct sockaddr*)&receiver, sock_len);
 
 }
 
 void *clientListen(void*){
-    sock = 0;
-    sock = socket(AF_INET, SOCK_DGRAM, 0);
-    socklen_t len_host = sizeof(host_addr);
     char *buffer= (char *) malloc(MAXLINE*sizeof(char));
+    socklen_t len_host = sizeof(host_addr);
     while(running){
-        recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &host_addr, &len_host);
+    int t = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, ( struct sockaddr *) &host_addr, &len_host);
+    if(t > 0){
         cout << buffer << endl;
-        strcpy(buffer, "");
     }
+    strcpy(buffer, "");
+    }
+
+
     pthread_exit(NULL);
 }
 
 void *acceptInput(void*){
-
-    sock = 0;
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0){
-        printf("\n Socket creation error \n");
-    }
     while(true){
         string message;
         output_lock.lock();
@@ -113,10 +110,7 @@ void *acceptInput(void*){
 */
 
 string contactPiServer(string message) {
-
-
     sock = 0;
-
     socklen_t len_client;
     struct sockaddr_in serv_addr;
     char server_message[message.size() +1];
@@ -158,7 +152,6 @@ void *startRoomServer(void* arguments){
     struct room_args *room = (struct room_args *)arguments;
     struct sockaddr_in servaddr, cliaddr;
 
-    int sockfd;
     char buffer[1024] = {0};
     // Creating socket file descriptor
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -189,7 +182,7 @@ void *startRoomServer(void* arguments){
       	if(n > 0){
          	if(string(buffer).at(0) == '@'){
             char already_in_use[4];
-            if(room_addr.count(string(buffer).substr(1)) > 0){
+            if(room_addr.count(string(buffer).substr(1, string(buffer).find(":"))) > 0){
                 strcpy(already_in_use, "1");
                 if(sendto(sockfd, already_in_use, sizeof(already_in_use), 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
                     perror("Send failed");
@@ -197,7 +190,9 @@ void *startRoomServer(void* arguments){
                 }
             }
             else{
-                room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1),cliaddr));
+                room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1, string(buffer).find(":")),cliaddr));
+
+                cout << to_string(cliaddr.sin_port) << endl << to_string(room_addr[string(buffer).substr(1, string(buffer).find(":"))].sin_port) << endl;
                 const char* message = "Hello from the host!";
                 if(sendto(sockfd, message, string(message).length()+1, 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
                     perror("Send failed");
@@ -212,7 +207,7 @@ void *startRoomServer(void* arguments){
             }
             cout << string(buffer).substr(1) << endl;
         }
-      	}htons(12001);
+      	}
     }
 
 
@@ -247,6 +242,9 @@ void joinRoom() {
     pthread_t listen_thread;
     pthread_t input_thread;
 
+    peer_addr.sin_family = AF_INET;
+    peer_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    peer_addr.sin_port = 0;
     string name;
     string password;
     cout << "What room do you want to join? ";
@@ -263,30 +261,21 @@ void joinRoom() {
     socklen_t len_client;
     struct sockaddr_in serv_addr;
     char buffer[1024] = {0};
-    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
         printf("\n Socket creation error \n");
     }
-
-    if (connect(sock, (struct sockaddr *)&host_addr, sizeof(host_addr)) < 0)
-    {
-        printf("\nConnection Failed \n");
-    }
-
     cout << "Enter a username: ";
     cin >> username;
 
-    string message = "@" + username;
+    string message = "@" + username + ":" + to_string(peer_addr.sin_port);
     char server_message[message.size() +1];
     strcpy(server_message, message.c_str());
     socklen_t len_host = sizeof(host_addr);
-    send(sock , server_message , strlen(server_message) , 0 );
-    recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &host_addr, &len_host);
-    cout << buffer << endl;
+    sendto(sockfd , server_message , strlen(server_message), 0, (struct sockaddr*)&host_addr, len_host);
     pthread_create(&listen_thread, NULL, &clientListen, NULL);
     pthread_create(&input_thread, NULL, &acceptInput, NULL);
 
-    pthread_join(listen_thread, NULL);
     pthread_join(input_thread, NULL);
 
 
