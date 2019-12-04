@@ -166,7 +166,9 @@ string getRoom(string roomName)
     string output;
     cout<<roomName<<endl;
     if(roomIp.count(roomName) > 0){
-        output = to_string(roomIp[roomName].sin_addr.s_addr) + ":" + to_string(roomIp[roomName].sin_port);
+        char ip[30];
+        strcpy(ip, (char*)inet_ntoa((struct in_addr)roomIp[roomName].sin_addr));
+        output = string(ip) + ":" + to_string(roomIp[roomName].sin_port);
         cout<<"Output: "<<output<<endl;
         return output;
     }

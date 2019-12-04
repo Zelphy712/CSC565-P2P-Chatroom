@@ -30,13 +30,14 @@ struct sockaddr_in host_addr;
 int sock;
 int i = 0;
 int is_server = 0;
-const char pi_server[] = "10.13.49.205";
+const char pi_server[] = "10.13.49.208";
 string username;
 map <string, struct sockaddr_in> room_addr;
 struct room_args args;
 
 
 void *acceptInput(void*);
+void *clientListen(void*);
 string contactPiServer(string message);
 void *startRoomServer(void* arguments);
 void createRoom();
@@ -47,12 +48,27 @@ void sendMessage(string message, struct sockaddr_in receiver);
 void sendMessage(string message, struct sockaddr_in receiver){
   	cout<<"Message: "<<message<<endl;
   	socklen_t sock_len = sizeof(receiver);
+  	sock = 0;
   	sock = socket(AF_INET, SOCK_DGRAM, 0);
     char server_message[message.size() +1];
     strcpy(server_message, message.c_str());
     sendto(sock, server_message, sizeof(server_message), 0, (const struct sockaddr*)&receiver, sock_len);
 
 }
+
+void *clientListen(void*){
+    sock = 0;
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    socklen_t len_host = sizeof(host_addr);
+    char *buffer= (char *) malloc(MAXLINE*sizeof(char));
+    while(running){
+        recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &host_addr, &len_host);
+        cout << buffer << endl;
+        strcpy(buffer, "");
+    }
+    pthread_exit(NULL);
+}
+
 void *acceptInput(void*){
 
     sock = 0;
@@ -77,6 +93,7 @@ void *acceptInput(void*){
         }
         else{
             // Send message to the room server
+            message = "#" +  message;
             sendMessage(message, host_addr);
         }
 
@@ -183,15 +200,21 @@ void *startRoomServer(void* arguments){
             }
             else{
                 room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1),cliaddr));
-                const char* message = to_string(room_addr[string(buffer).substr(1)].sin_port).c_str();
-                if(sendto(sockfd, message, sizeof(message), 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
+                const char* message = "Hello from the host!";
+                if(sendto(sockfd, message, string(message).length()+1, 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
                     perror("Send failed");
                     exit(EXIT_FAILURE);
                 }
             }
             strcpy(already_in_use, "");
         	}
-      	}
+        else if(string(buffer).at(0) == '#') {
+            for(map<string, struct sockaddr_in>::iterator it = room_addr.begin(); it!=room_addr.end(); ++it){
+                sendMessage(string(buffer).substr(1), it->second);
+            }
+            cout << string(buffer).substr(1) << endl;
+        }
+      	}htons(12001);
     }
 
 
@@ -223,6 +246,8 @@ void joinRoom() {
     -Once the ip address is known, send a message that contains the peer's ip address, the port number and the room password
     -Confirmation message upon successful join
     */
+    pthread_t listen_thread;
+    pthread_t input_thread;
 
     string name;
     string password;
@@ -232,8 +257,8 @@ void joinRoom() {
   	string ipString;
     ipString = contactPiServer("?"+name);
     if(ipString != "-1"){
-      	host_addr.sin_port = (unsigned short) stoi(ipString.substr(ipString.find(":")+1));
-      	host_addr.sin_addr.s_addr = (unsigned long) stoul(ipString.substr(0,ipString.find(":")),nullptr,10);
+      	host_addr.sin_port = htons(12001);
+      	inet_pton(AF_INET, ipString.substr(0,ipString.find(":")).c_str(), &host_addr.sin_addr);
     }
   	cout << host_addr.sin_port << endl << host_addr.sin_addr.s_addr << endl;
   	int sock = 0, valread;
@@ -259,9 +284,13 @@ void joinRoom() {
     strcpy(server_message, message.c_str());
     socklen_t len_host = sizeof(host_addr);
     send(sock , server_message , strlen(server_message) , 0 );
-    bzero(server_message, sizeof(server_message));
     recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &host_addr, &len_host);
     cout << buffer << endl;
+    pthread_create(&listen_thread, NULL, &clientListen, NULL);
+    pthread_create(&input_thread, NULL, &acceptInput, NULL);
+
+    pthread_join(listen_thread, NULL);
+    pthread_join(input_thread, NULL);
 
 
     return;
@@ -295,8 +324,8 @@ void exitRoom() {
 
 
 int main(){
-    int choice;output_lock.unlock();
-		host_addr.sin_family = AF_INET;
+    int choice;
+    host_addr.sin_family = AF_INET;
 
     while(running){
         cout << "Choose an option:" << endl << "1. Create a room" << endl << "2. Join a room" << endl;
