@@ -168,11 +168,9 @@ void *startRoomServer(void* arguments){
 
     memset(&servaddr, 0, sizeof(servaddr));
     memset(&cliaddr, 0, sizeof(cliaddr));
-
-    socklen_t cli_len = sizeof(cliaddr);
     // Filling server information        int sock = 0, valread;
 
-    socklen_t len_client;
+    socklen_t len_client = sizeof(cliaddr);
     servaddr.sin_family = AF_INET; // IPv4
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(12001);
@@ -260,7 +258,6 @@ void joinRoom() {
       	host_addr.sin_port = htons(12001);
       	inet_pton(AF_INET, ipString.substr(0,ipString.find(":")).c_str(), &host_addr.sin_addr);
     }
-  	cout << host_addr.sin_port << endl << host_addr.sin_addr.s_addr << endl;
   	int sock = 0, valread;
 
     socklen_t len_client;
