@@ -48,7 +48,6 @@ void exitRoom();
 void sendMessage(string message, struct sockaddr_in receiver);
 
 void sendMessage(string message, struct sockaddr_in receiver){
-  	cout<<"Message: "<<message<<endl;
   	socklen_t sock_len = sizeof(receiver);
     char server_message[message.size() +1];
     strcpy(server_message, message.c_str());
@@ -63,6 +62,7 @@ void *clientListen(void*){
     int t = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, ( struct sockaddr *) &host_addr, &len_host);
     if(t > 0){
         cout << buffer << endl;
+
     }
     strcpy(buffer, "");
     }
@@ -75,24 +75,26 @@ void *acceptInput(void*){
     while(true){
         string message;
         output_lock.lock();
-        cout << "Please input your message: ";
         cin >> message;
+        output_lock.unlock();
+
         if(message.find("/exit")!=-1){
             exitRoom();
             break;
         }
-        output_lock.unlock();
-        if(is_server){
 
+        if(is_server){
+            message = username + message;
             for(map<string, struct sockaddr_in>::iterator it = room_addr.begin(); it!=room_addr.end(); ++it){
                 sendMessage(message, it->second);
             }
         }
         else{
             // Send message to the room server
-            message = "#" +  message;
+            message = "#"  + username + ": " + message;
             sendMessage(message, host_addr);
         }
+
 
     }
     pthread_exit(NULL);
@@ -139,10 +141,6 @@ string contactPiServer(string message) {
     send(sock , server_message , strlen(server_message) , 0 );
     bzero(server_message, sizeof(server_message));
     recvfrom(sock, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &serv_addr, &len_server);
-        cout<<"Return length: "<<string(buffer).length() << endl;
-        cout<<"Return string: "<<buffer<<endl;
-
-    cout<<"---------------------------------"<<endl;
   	return string(buffer);
     close(sock);
 }
@@ -191,9 +189,7 @@ void *startRoomServer(void* arguments){
             }
             else{
                 room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1, string(buffer).find(":")),cliaddr));
-
-                cout << to_string(cliaddr.sin_port) << endl << to_string(room_addr[string(buffer).substr(1, string(buffer).find(":"))].sin_port) << endl;
-                const char* message = "Hello from the host!";
+                const char* message = "\nHello from the host!\n";
                 if(sendto(sockfd, message, string(message).length()+1, 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
                     perror("Send failed");
                     exit(EXIT_FAILURE);
@@ -218,6 +214,8 @@ void *startRoomServer(void* arguments){
 void createRoom(){
     pthread_t server_thread;
     pthread_t message_thread;
+    cout << "Make a username: ";
+    cin >> username;
     cout << "Input a room name: ";
     cin >> args.room_name;
     cout << "Input a password: ";
@@ -265,10 +263,10 @@ void joinRoom() {
     {
         printf("\n Socket creation error \n");
     }
-    cout << "Enter a username: ";
+    cout << "Enter a username: ";output_lock.unlock();
     cin >> username;
 
-    string message = "@" + username + ":" + to_string(peer_addr.sin_port);
+    string message = "@" + username;
     char server_message[message.size() +1];
     strcpy(server_message, message.c_str());
     socklen_t len_host = sizeof(host_addr);
