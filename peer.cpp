@@ -24,15 +24,12 @@ using namespace std;
 mutex output_lock;
 struct room_args {
     string room_name;
-    string password;
 };
 struct sockaddr_in host_addr;
-struct sockaddr_in peer_addr;
 int sock;
 int sockfd;
-int i = 0;
 int is_server = 0;
-const char pi_server[] = "192.168.0.106";
+const char pi_server[] = "192.168.1.4";
 string username;
 map <string, struct sockaddr_in> room_addr;
 struct room_args args;
@@ -47,6 +44,19 @@ void joinRoom();
 void exitRoom();
 void sendMessage(string message, struct sockaddr_in receiver);
 
+/*
+/****************************************************************
+/ Send Message function
+/
+/ Input: message (string)
+/ Input: receiver (sockaddr_in)
+/
+/ Send a message to the address specified by receiver
+/
+/
+******************************************************************
+*/
+
 void sendMessage(string message, struct sockaddr_in receiver){
   	socklen_t sock_len = sizeof(receiver);
     char server_message[message.size() +1];
@@ -54,6 +64,18 @@ void sendMessage(string message, struct sockaddr_in receiver){
     sendto(sockfd, server_message, string(server_message).length() + 1, 0, (const struct sockaddr*)&receiver, sock_len);
 
 }
+
+/*
+/****************************************************************
+/ Client Listen Thread function
+/
+/ Input: (void*)
+/
+/ While running, listen for messages from the host of the room,
+/ and act according to the message
+/
+******************************************************************
+*/
 
 void *clientListen(void*){
     char *buffer= (char *) malloc(MAXLINE*sizeof(char));
@@ -86,6 +108,18 @@ void *clientListen(void*){
     pthread_exit(NULL);
 }
 
+/*
+/****************************************************************
+/ Accept Input Thread function
+/
+/ Input: (void*)
+/
+/ While the application is running, listen for user input and
+/ act according to what the input is
+/
+******************************************************************
+*/
+
 void *acceptInput(void*){
     while(true){
         string message;
@@ -93,12 +127,14 @@ void *acceptInput(void*){
         getline(cin, message);
         output_lock.unlock();
 
+        // Once a user is in a chat room, the exit command is "/exit"
         if(message.find("/exit")!=-1){
             exitRoom();
             break;
         }
 
         if(is_server){
+            // Send message to all peers in the room
             message = username + ": " + message;
             for(map<string, struct sockaddr_in>::iterator it = room_addr.begin(); it!=room_addr.end(); ++it){
                 sendMessage(message, it->second);
@@ -160,6 +196,18 @@ string contactPiServer(string message) {
     close(sock);
 }
 
+/*
+/****************************************************************
+/ Start Room Server Thread function
+/
+/ Input: Room Arguments (void*)
+/
+/ Start a room server to begin listening for new clients
+/
+/
+******************************************************************
+*/
+
 void *startRoomServer(void* arguments){
 
     struct room_args *room = (struct room_args *)arguments;
@@ -174,7 +222,6 @@ void *startRoomServer(void* arguments){
 
     memset(&servaddr, 0, sizeof(servaddr));
     memset(&cliaddr, 0, sizeof(cliaddr));
-    // Filling server information        int sock = 0, valread;
 
     socklen_t len_client = sizeof(cliaddr);
     servaddr.sin_family = AF_INET; // IPv4
@@ -194,23 +241,12 @@ void *startRoomServer(void* arguments){
 
       	if(n > 0){
          	if(string(buffer).at(0) == '@'){
-            char already_in_use[4];
-            if(room_addr.count(string(buffer).substr(1, string(buffer).find(":"))) > 0){
-                strcpy(already_in_use, "1");
-                if(sendto(sockfd, already_in_use, sizeof(already_in_use), 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
-                    perror("Send failed");
-                    exit(EXIT_FAILURE);
-                }
-            }
-            else{
-                room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1, string(buffer).find(":")),cliaddr));
+                room_addr.insert(pair<string,struct sockaddr_in>(string(buffer).substr(1),cliaddr));
                 const char* message = "\nHello from the host!\n";
                 if(sendto(sockfd, message, string(message).length()+1, 0, (const struct sockaddr*)&cliaddr, len_client) < 0){
                     perror("Send failed");
                     exit(EXIT_FAILURE);
                 }
-            }
-            strcpy(already_in_use, "");
         	}
         else if(string(buffer).at(0) == '#') {
             for(map<string, struct sockaddr_in>::iterator it = room_addr.begin(); it!=room_addr.end(); ++it){
@@ -227,44 +263,65 @@ void *startRoomServer(void* arguments){
     pthread_exit(NULL);
 
 }
+
+/*
+/****************************************************************
+/ Create Room function
+/
+/ Ask the user for a room name, and then send a room creation
+/ message to the pi server for that room name
+/
+******************************************************************
+*/
 void createRoom(){
+
+    string room_name; // Create a temporary variable for the name in case the name is already in the pi server
     pthread_t server_thread;
     pthread_t message_thread;
-    cout << "Make a username: ";
-    getline(cin, username);
-    cout << "Input a room name: ";
-    getline(cin, args.room_name);
-    cout << "Input a password: ";
-    getline(cin, args.password);
-    cout << endl;
 
-    contactPiServer("@"+args.room_name);
+    string room_creation
+    room_creation = contactPiServer("@"+room_name);
 
+    if(room_creation == "-1"){
+        while(true){
+            cout << "Make a username: ";
+            getline(cin, username);
+            cout << "Input a room name: ";
+            getline(cin, room_name);
+        }
+    }
+
+    args.room_name = room_name; // If the room name is available, set the room name
     pthread_create(&server_thread, NULL, &startRoomServer, (void*) &args);
     pthread_create(&message_thread, NULL, &acceptInput, NULL);
     pthread_join(server_thread, NULL);
     pthread_join(message_thread, NULL);
+
 }
 
+
+/*
+/****************************************************************
+/ Join Room function
+/
+/ Ask the pi server for a room's host information; if the room
+/ exists, the host information will be stored and the client will
+/ send the host its user name.
+/
+******************************************************************
+*/
 void joinRoom() {
-    /*
-    -Ping the raspberryPi server to find the ip address of the room it is looking for
-    -Once the ip address is known, send a message that contains the peer's ip address, the port number and the room password
-    -Confirmation message upon successful join
-    */
     pthread_t listen_thread;
     pthread_t input_thread;
 
-    peer_addr.sin_family = AF_INET;
-    peer_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    peer_addr.sin_port = 0;
     string name;
     string password;
     cout << "What room do you want to join? ";
     getline(cin, name);
     cout << endl;
   	string ipString;
-    ipString = contactPiServer("?"+name);
+
+    ipString = contactPiServer("?"+name); // Ask the pi server if this room exists.
     if(ipString != "-1"){
       	host_addr.sin_port = htons(12001);
       	inet_pton(AF_INET, ipString.substr(0,ipString.find(":")).c_str(), &host_addr.sin_addr);
@@ -276,6 +333,7 @@ void joinRoom() {
             cout << endl;
             string ipString;
             ipString = contactPiServer("?"+name);
+            // If the room exists, get the host information and store it.
             if(ipString != "-1"){
                 host_addr.sin_port = htons(12001);
                 inet_pton(AF_INET, ipString.substr(0,ipString.find(":")).c_str(), &host_addr.sin_addr);
@@ -283,10 +341,6 @@ void joinRoom() {
             }
         }
     }
-  	int sock = 0, valread;
-
-    socklen_t len_client;
-    struct sockaddr_in serv_addr;
     char buffer[1024] = {0};
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
@@ -303,35 +357,41 @@ void joinRoom() {
     pthread_create(&listen_thread, NULL, &clientListen, NULL);
     pthread_create(&input_thread, NULL, &acceptInput, NULL);
 
+    pthread_join(listen_thread, NULL);
     pthread_join(input_thread, NULL);
+
 
 
     return;
 }
 
+
+/*
+/****************************************************************
+/ Exit Room function
+/
+/ Send an exit message to either the host or the pi server and
+/ end the program.
+/
+******************************************************************
+*/
 void exitRoom() {
     if(is_server){
         if(room_addr.size() == 0){
+            // If there are no other peers in the room, send a delete message to the pi server.
             contactPiServer("^"+args.room_name);
           	running = false;
         }else{
+            //send message to first peer in the map that says "server|<comma separated list of ip:port>"
           	sendMessage("server|" + to_string(room_addr.begin()->second.sin_addr.s_addr) + ":" + to_string(room_addr.begin()->second.sin_port),room_addr[room_addr.begin()->first]);
           	running = false;
-						//send message to first peer in the map that says "server|<comma separated list of ip:port>"
             //the new host sends "host|" to all of the received IPs so they know to change their host location.
         }
     }else{
-        //send message to server that says "exit|<username>"
-      	sendMessage("exit|" + username,host_addr);
+      	sendMessage("exit|" + username,host_addr); //send message to server that says "exit|<username>"
       	running = false;
     }
-    /*
-    -If peer is the current room server, send an exit message to the raspberryPi server
-        +Send the list of peers to another peer, making them the new chat room server; if there are no other peers, toss the room
-        +Display message to all peers notifying the server change
-    -Send goodbye message to all other peers
-    -Close connection
-    */
+
     return;
 }
 
