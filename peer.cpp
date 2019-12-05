@@ -274,12 +274,17 @@ void *startRoomServer(void* arguments){
 ******************************************************************
 */
 void createRoom(){
-
+    string room_creation; // Variable to determine if room creation was successful
     string room_name; // Create a temporary variable for the name in case the name is already in the pi server
     pthread_t server_thread;
     pthread_t message_thread;
 
-    string room_creation
+    cout << "Make a username: ";
+    getline(cin, username);
+    cout << "Input a room name: ";
+    getline(cin, room_name);
+
+
     room_creation = contactPiServer("@"+room_name);
 
     if(room_creation == "-1"){
