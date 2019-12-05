@@ -29,7 +29,7 @@ struct sockaddr_in host_addr;
 int sock;
 int sockfd;
 int is_server = 0;
-const char pi_server[] = "192.168.1.4";
+const char pi_server[] = "10.13.49.208";
 string username;
 map <string, struct sockaddr_in> room_addr;
 struct room_args args;
