@@ -32,7 +32,7 @@ int sock;
 int sockfd;
 int i = 0;
 int is_server = 0;
-const char pi_server[] = "192.168.1.4";
+const char pi_server[] = "192.168.0.106";
 string username;
 map <string, struct sockaddr_in> room_addr;
 struct room_args args;
@@ -62,7 +62,23 @@ void *clientListen(void*){
     int t = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_DONTWAIT, ( struct sockaddr *) &host_addr, &len_host);
     if(t > 0){
         cout << buffer << endl;
+        if(string(buffer).find("server|")!=-1){
+            cout<<"host left"<<endl;
+            host_addr.sin_port = htons(12001);
+            inet_pton(AF_INET, string(buffer).substr(0,string(buffer).find(":")).c_str(), &host_addr.sin_addr);
+            sendMessage("@"+username,host_addr);
 
+        }else if(buffer[0]=='@'){
+            is_server = 1;
+            pthread_t server_thread;
+            pthread_t message_thread;
+            contactPiServer("@"+args.room_name);
+            pthread_create(&server_thread, NULL, &startRoomServer, (void*) &args);
+            pthread_create(&message_thread, NULL, &acceptInput, NULL);
+            pthread_join(server_thread, NULL);
+            pthread_join(message_thread, NULL);
+
+        }
     }
     strcpy(buffer, "");
     }
@@ -253,6 +269,20 @@ void joinRoom() {
     if(ipString != "-1"){
       	host_addr.sin_port = htons(12001);
       	inet_pton(AF_INET, ipString.substr(0,ipString.find(":")).c_str(), &host_addr.sin_addr);
+    }else{
+        while(true){
+            cout<<"Room does not exist."<<endl;
+            cout << "What room do you want to join? ";
+            getline(cin, name);
+            cout << endl;
+            string ipString;
+            ipString = contactPiServer("?"+name);
+            if(ipString != "-1"){
+                host_addr.sin_port = htons(12001);
+                inet_pton(AF_INET, ipString.substr(0,ipString.find(":")).c_str(), &host_addr.sin_addr);
+                break;
+            }
+        }
     }
   	int sock = 0, valread;
 
