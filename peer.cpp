@@ -67,7 +67,6 @@ void *clientListen(void*){
             host_addr.sin_port = htons(12001);
             inet_pton(AF_INET, string(buffer).substr(0,string(buffer).find(":")).c_str(), &host_addr.sin_addr);
             sendMessage("@"+username,host_addr);
-
         }else if(buffer[0]=='@'){
             is_server = 1;
             pthread_t server_thread;
